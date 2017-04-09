@@ -13,6 +13,7 @@ _start:
 	Main_Loop:
 		call Get_ADC_CH0 #Get the current ADC value
 		mov r4, r2
+		call uart_check
 		call Print_Raw_Value
 		br Main_Loop
 
@@ -21,6 +22,13 @@ Get_ADC_CH0:
 	ldw r2, 0(r7) #Read the value from ADC channel 0 
 	ret #return 
 
+uart_check:
+	ldwio r2, 4(r6) # Load from the JTAG 
+	srli  r2, r2, 16 # Check only the write available bits 
+	beq   r2, r0, uart_check # If this is 0 (branch true), data cannot be sent
+	ret
+	
+	
 Print_Raw_Value:
 	movia r7, 0xFF201000 #The base Address for the JTAG UART
 	ldb r6, 0(r4) #load a byte from r4 into r6
