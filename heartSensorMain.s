@@ -16,8 +16,6 @@ _start:
 		call Print_Raw_Value
 		br Main_Loop
 
-
-
 Get_ADC_CH0:
 	movia r7, ADC_CH0
 	ldw r2, 0(r7) #Read the value from ADC channel 0 
