@@ -7,6 +7,7 @@
 .equ SIXTY_SECONDS, 0x3C
 
 .global main
+
 main:
 	
 	#********************Initialize Timer2*******************
@@ -20,9 +21,9 @@ main:
 	#******************************************************
 	
 	#******************Initialize ADC**********************
-	movui r10, 0x0 #Reset value to 0; Used to determine if a heart beat occured
+	movui r10, 0x1 #Reset value to 0; Used to determine if a heart beat occured
 	movia r3, ADC_CONTROL #ADC control address in register 3
-	stwio r2, 0(r3) #Set ADC to auto update
+	stwio r10, 0(r3) #Set ADC to auto update
 	#*****************************************************
 
 	Main_Loop:
