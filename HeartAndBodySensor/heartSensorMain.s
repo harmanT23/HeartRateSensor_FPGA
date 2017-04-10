@@ -58,6 +58,16 @@ Heart_Expand:
 	ret
 	
 Heart_Expand_True:
+	#Check if timer is on
+	movia r8, Timer2 #Timer 2 address in register 2
+	ldw r9, 4(r8)
+	andi r9, r9, 0x00000004 #mask all the bits except stop bits
+	movui r8, 0x4
+	beq r9, r8, Get_timer_value
+	ret 
+	
+
+Get_timer_value:
 	#Take snapshot of the time and store it
 	movia r8, Timer2 #Timer 2 address in register 2
 	stwio r0, 16(r8) #Tell timer to take a snapshot of the time
@@ -75,9 +85,8 @@ Heart_Beat:
 	movia r8, Timer2 #Timer 2 address in register 2
 	ldw r9, 4(r8)
 	andi r9, r9, 0x00000008 #mask all the bits except stop bits
-	movui r8, 0x1
+	movui r8, 0x8
 	beq r9, r8, Heart_Beat_True  #If timer has stopped we know a heart beat has occured
-
 	ret
 
 Heart_Beat_True:
@@ -86,6 +95,7 @@ Heart_Beat_True:
 	movia r5, THREE_SECOND_INTERVAL
 	movia r6, CLOCK_CYCLES_PER_SECOND
 	movi r7, SIXTY_SECONDS
+	call Heart_Rate
 	ret
 
 
