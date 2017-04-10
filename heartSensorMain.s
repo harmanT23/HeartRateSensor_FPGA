@@ -6,8 +6,8 @@
 .equ CLOCK_CYCLES_PER_SECOND, 0x5F5E100
 .equ SIXTY_SECONDS, 0x3C
 
-.global _start
-_start:
+.global main
+main:
 	
 	#********************Initialize Timer2*******************
 	movia r8, Timer2 #Timer 2 address in register 2
@@ -81,34 +81,11 @@ Heart_Beat:
 
 Heart_Beat_True:
 	#Compute the period of the heart beat
-	subi r4, THREE_SECOND_INTERVAL, r4 #The number of clock cycles for a complete heart beat to complete 
-	movui r5, 0x0 #Reset counter value to 0
-	call Cycles_to_seconds #get the period of the heart rate
-	mov r4, r2 #move period of heart rate into r4
-	movui r5, 0x0 #reset counter value to 0
-	call Period_to_Heart_Rate
-	
+	#r4 holds timed cycles
+	movia r5, THREE_SECOND_INTERVAL
+	movia r6, CLOCK_CYCLES_PER_SECOND
+	movi r7, SIXTY_SECONDS
 	ret
 
-Cycles_to_seconds:
-#Subtract the number of clock cycles per second of the board from r4 till less than 0
-	bgt r4, r0, Divide_BCLK
-	mov r2, r5
-	ret
-	
-Divide_BCLK:
-	subi r4, r4,  CLOCK_CYCLES_PER_SECOND
-	addi r5, r5, 0x1
-	br Cycles_to_seconds
 
-Period_to_Heart_Rate:
-	bgt r4, r0, Divide_HR
-	mov r2, r5
-	ret
-	
-Divide_HR:
-	subi r4, r4, SIXTY_SECONDS
-	addi r5, r5, 0x1
-	br Period_to_Heart_Rate
-	
 
