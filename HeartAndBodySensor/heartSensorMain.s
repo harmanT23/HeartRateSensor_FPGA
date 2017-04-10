@@ -16,7 +16,7 @@ main:
 	stwio r9, 8(r8)  #Counter start value(low)
 	
 	movui r9, %hi(THREE_SECOND_INTERVAL) 
-	stwio r10, 12(r8) #Counter start value (high)
+	stwio r9, 12(r8) #Counter start value (high)
 	#******************************************************
 	
 	#******************Initialize ADC**********************
@@ -36,7 +36,7 @@ main:
 
 Get_ADC_CH0:
 	movia r7, ADC_CH0  #Store channel 0 address into r7
-	ldw r2, 0(r7) #Read the value from ADC channel 0 into r2
+	ldwio r2, 0(r7) #Read the value from ADC channel 0 into r2
 	ret
 
 Heart_Contract:
