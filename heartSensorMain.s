@@ -1,39 +1,114 @@
 .equ ADC_CH0, 0xFF204000
 .equ ADC_CONTROL, 0xFF204004
-.equ JTAG_UART, 0xFF201000
-
+.equ HEART_THRESHOLD, 0x00008A00
+.equ THREE_SECOND_INTERVAL, 0x11E1A300
+.equ Timer2, 0xFF202020
+.equ CLOCK_CYCLES_PER_SECOND, 0x5F5E100
+.equ SIXTY_SECONDS, 0x3C
 
 .global _start
 _start:
 	
-	movui r2, 0x1 
-	movia r3, ADC_CONTROL
+	#********************Initialize Timer2*******************
+	movia r8, Timer2 #Timer 2 address in register 2
+	
+	movui r9, %lo(THREE_SECOND_INTERVAL) 
+	stwio r9, 8(r8)  #Counter start value(low)
+	
+	movui r9, %hi(THREE_SECOND_INTERVAL) 
+	stwio r10, 12(r8) #Counter start value (high)
+	#******************************************************
+	
+	#******************Initialize ADC**********************
+	movui r10, 0x0 #Reset value to 0; Used to determine if a heart beat occured
+	movia r3, ADC_CONTROL #ADC control address in register 3
 	stwio r2, 0(r3) #Set ADC to auto update
+	#*****************************************************
 
 	Main_Loop:
 		call Get_ADC_CH0 #Get the current ADC value
-		mov r4, r2
-		call uart_check
-		call Print_Raw_Value
+		mov r4, r2 #Transfer ADC value as argument
+		call Heart_Contract
+		call Heart_Expand
+		mov r4, r2 #Transfer Timer value 
+		call Heart_Beat
 		br Main_Loop
 
 Get_ADC_CH0:
-	movia r7, ADC_CH0
-	ldw r2, 0(r7) #Read the value from ADC channel 0 
-	ret #return 
+	movia r7, ADC_CH0  #Store channel 0 address into r7
+	ldw r2, 0(r7) #Read the value from ADC channel 0 into r2
+	ret
 
-uart_check:
-	ldwio r2, 4(r6) # Load from the JTAG 
-	srli  r2, r2, 16 # Check only the write available bits 
-	beq   r2, r0, uart_check # If this is 0 (branch true), data cannot be sent
+Heart_Contract:
+	movia r7, HEART_THRESHOLD 
+	blt r4, r7, Heart_Contract_True #Check if value read is less than threshold value; If so we assume the user heart contracted
 	ret
 	
-	
-Print_Raw_Value:
-	movia r7, 0xFF201000 #The base Address for the JTAG UART
-	ldb r6, 0(r4) #load a byte from r4 into r6
-	addi r6, r6, 0x30  #take the number and add the character '0' to it
-	stwio r6, 0(r7) #send 1 bit of information to JTAG UART
-	srli r4, r4, 1 #Shift r4 by 1 bit to the right until it is all 0's
-	bne r4, r0, Print_Raw_Value
+Heart_Contract_True:
+	#Start the timer and begin counting down from 3
+	stwio r0, 0(r8) #Reset timer2
+	movui r9, 0b100	#Start Timer
+	stwio r9, 4(r8)
 	ret
+
+Heart_Expand:
+	movia r7, HEART_THRESHOLD
+	bgt r4, r7, Heart_Expand_True #Check if value read is more than threshold value; if so we assume the user heart has expanded
+	ret
+	
+Heart_Expand_True:
+	#Take snapshot of the time and store it
+	movia r8, Timer2 #Timer 2 address in register 2
+	stwio r0, 16(r8) #Tell timer to take a snapshot of the time
+	ldwio r7, 16(r8) #Read bits 0-15
+	ldwio r2, 20(r8) #Read bits 16-31
+	slli r2, r2, 16 #Shift left logically
+	or r2, r2, r7 #Combine bits 0 through 31
+	#stop the timer
+	movui r9, 0b1000
+	stwio r9, 4(r8)
+	ret
+
+Heart_Beat:
+	#Check if timer has stopped;
+	movia r8, Timer2 #Timer 2 address in register 2
+	ldw r9, 4(r8)
+	andi r9, r9, 0x00000008 #mask all the bits except stop bits
+	movui r8, 0x1
+	beq r9, r8, Heart_Beat_True  #If timer has stopped we know a heart beat has occured
+
+	ret
+
+Heart_Beat_True:
+	#Compute the period of the heart beat
+	subi r4, THREE_SECOND_INTERVAL, r4 #The number of clock cycles for a complete heart beat to complete 
+	movui r5, 0x0 #Reset counter value to 0
+	call Cycles_to_seconds #get the period of the heart rate
+	mov r4, r2 #move period of heart rate into r4
+	movui r5, 0x0 #reset counter value to 0
+	call Period_to_Heart_Rate
+	
+	ret
+
+Cycles_to_seconds:
+#Subtract the number of clock cycles per second of the board from r4 till less than 0
+	bgt r4, r0, Divide_BCLK
+	mov r2, r5
+	ret
+	
+Divide_BCLK:
+	subi r4, r4,  CLOCK_CYCLES_PER_SECOND
+	addi r5, r5, 0x1
+	br Cycles_to_seconds
+
+Period_to_Heart_Rate:
+	bgt r4, r0, Divide_HR
+	mov r2, r5
+	ret
+	
+Divide_HR:
+	subi r4, r4, SIXTY_SECONDS
+	addi r5, r5, 0x1
+	br Period_to_Heart_Rate
+	
+
