@@ -10,16 +10,6 @@
 
 main:
 	
-	#********************Initialize Timer2*******************
-	movia r8, Timer2 #Timer 2 address in register 2
-	
-	movui r9, %lo(THREE_SECOND_INTERVAL) 
-	stwio r9, 8(r8)  #Counter start value(low)
-	
-	movui r9, %hi(THREE_SECOND_INTERVAL) 
-	stwio r9, 12(r8) #Counter start value (high)
-	#******************************************************
-	
 	#******************Initialize ADC**********************
 	movui r10, 0x1 #set auto-update on ADC to on
 	movia r3, ADC_CONTROL #ADC control address in register 3
