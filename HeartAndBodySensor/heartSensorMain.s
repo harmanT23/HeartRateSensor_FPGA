@@ -154,6 +154,7 @@ TIMER_ISR:
 	beq et, r0, exit
 	
 	#Print out: Heart Arythmia detected 
+	call heart_warning
 	
 	#Acknowledge interrupt
 	movia et, Timer2
