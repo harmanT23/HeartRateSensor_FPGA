@@ -1,6 +1,7 @@
 .equ ADC_CH0, 0xFF204000
 .equ ADC_CONTROL, 0xFF204004
-.equ HEART_THRESHOLD, 0x00008A00
+.equ HEART_THRESHOLD, 0x000015D0
+.equ MAX_VAL_LIMIT, 0x00007530
 .equ THREE_SECOND_INTERVAL, 0x11E1A300
 .equ Timer2, 0xFF202020
 .equ CLOCK_CYCLES_PER_SECOND, 0x5F5E100
@@ -29,10 +30,19 @@ Get_ADC_CH0:
 	ret
 
 Heart_Contract:
-	call Get_ADC_CH0 #Get latest sensor value which is stored in r4
-	movi r7, HEART_THRESHOLD 
-	bgt r4, r7, Heart_Contract #Keep calling heart contract until the value is less than the threshold, in which case, the heart has contracted.
+	addi sp, sp, -4
+	stw ra, 0(sp)
+	
+	Heart_Contract_Loop:
+		call Get_ADC_CH0 #Get latest sensor value which is stored in r4
+		movi r7, HEART_THRESHOLD
+		addi r7, r7, MAX_VAL_LIMIT
+		bgt r4, r7, Heart_Contract_Loop #Keep calling heart contract until the value is less than the threshold, in which case, the heart has contracted.
+	
 	call Heart_Contract_True
+	
+	ldw ra, 0(sp)
+	addi sp, sp, 4
 	ret
 	
 Heart_Contract_True:
@@ -45,24 +55,36 @@ Heart_Contract_True:
 	movui r9, %hi(THREE_SECOND_INTERVAL) 
 	stwio r9, 12(r8) #Counter start value (high)
 	
-	movui r9, 0b0100	#Start Timer2
+	stwio r0, 0(r8) #Clear timer2 settings 
+	
+	movui r9, 0b100	#Start Timer2
 	stwio r9, 4(r8)
 	ret
 
 Heart_Expand:
-	call Get_ADC_CH0 #Get latest sensor value which is stored in r4
-	movi r7, HEART_THRESHOLD
-	blt r4, r7, Heart_Expand #Keep calling heart expand until the value is greater than the threshold, in which case, the heart has expanded.
+	addi sp, sp, -4
+	stw ra, 0(sp)
+	
+	Heart_Expand_Loop:
+		call Get_ADC_CH0 #Get latest sensor value which is stored in r4	
+		movi r7, HEART_THRESHOLD
+		addi r7, r7, MAX_VAL_LIMIT
+		blt r4, r7, Heart_Expand_Loop #Keep calling heart expand until the value is greater than the threshold, in which case, the heart has expanded.
+	
 	call Heart_Expand_True
+	
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+	
 	ret
 	
 Heart_Expand_True:
 	#Check if timer2 is on
 	movia r8, Timer2 #Timer 2 address in register 2
 	ldw r9, 0(r8)
-	andi r9, r9, 0x00000002 #mask all the bits except stop bits
-	movui r8, 0x2
-	beq r9, r8, Get_timer_value #if timer is on then we want to get the time
+	andi r9, r9, 0x00000001 #mask all the bits except timeout bit
+	movui r8, 0x1
+	bne r9, r8, Get_timer_value #if timeout bit is 0; then the timer is on
 	ret 
 	
 
@@ -80,18 +102,30 @@ Get_timer_value:
 	ret
 
 Heart_Beat:
+	addi sp, sp, -4
+	stw ra, 0(sp)
+
 	#Check if timer has stopped;
 	movia r8, Timer2 #Timer 2 address in register 2
 	ldw r9, 0(r8)
 	andi r9, r9, 0x0000002 #mask all the bits except stop bits
 	movui r8, 0x2
 	beq r9, r8, Heart_Beat_True  #If timer has stopped we know a heart beat has occured
+	
+	ldw ra, 0(sp)
+	addi sp, sp, 4
 	ret
 
 Heart_Beat_True:
 	#Compute the period of the heart beat
 	#r4 holds timed cycles
+	addi sp, sp, -4
+	stw ra, 0(sp)
+	
 	call Heart_Rate
+	
+	ldw ra, 0(sp)
+	addi sp, sp, 4
 	ret
 
 
