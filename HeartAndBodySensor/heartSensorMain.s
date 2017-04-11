@@ -4,6 +4,7 @@
 .equ MAX_VAL_LIMIT, 0x00007530
 .equ THREE_SECOND_INTERVAL, 0x11E1A300
 .equ Timer2, 0xFF202020
+.equ Timer1, 0xFF202000 
 .equ CLOCK_CYCLES_PER_SECOND, 0x5F5E100
 .equ SIXTY_SECONDS, 0x3C
 
@@ -47,20 +48,24 @@ Heart_Contract_True:
 	#Initialize timer2 and have it count down from 3 seconds
 	movia r8, Timer2 #Timer 2 address in register 2
 	
-	#Stop Timer in case it is already running
-	movui r9, 0x08
-	stwio r9, 4(r8)
-	
 	movui r9, %lo(THREE_SECOND_INTERVAL) 
 	stwio r9, 8(r8)  #Counter start value(low)
 	
 	movui r9, %hi(THREE_SECOND_INTERVAL) 
 	stwio r9, 12(r8) #Counter start value (high)
-	
+	#******************************************************
 	stwio r0, 0(r8) #Clear timer2 settings 
 	
-	movui r9, 0b100	#Start Timer2
+	movui r9, 0b0101	#Start Timer2; Enable interrupts
 	stwio r9, 4(r8)
+	
+	#Enable interrupts
+	movui r9, 0x4
+	wrctl ienable, r9 
+	
+	#Set interrupt enable to 12
+	movui r9, 0x1
+	wrctl status, r9
 	ret
 
 Heart_Expand:
@@ -107,15 +112,53 @@ Heart_Beat:
 	
 	call Heart_Rate #compute heart rate
 	
-	mov r4, r2 #move heart rate into r4 
+	mov r4, r2 #move heart rate from r2 to r4
+		
+	call Delay #Create a 3 second delay
 	
 	call console_heart_rate #Print to console the heart rate
-	
-	
 	
 	ldw ra, 0(sp)
 	addi sp, sp, 4
 	ret
 
 
+Delay:
+	
+	#********************Initialize Timer1*******************
+	movia r8, Timer1 #Timer 1 address in register 2
+	
+	movui r9, %lo(THREE_SECOND_INTERVAL) 
+	stwio r9, 8(r8)  #Counter start value(low)
+	
+	movui r9, %hi(THREE_SECOND_INTERVAL) 
+	stwio r9, 12(r8) #Counter start value (high)
+	#******************************************************
+	stwio r0, 0(r8) #Clear Timer1 settings
+	movui r9, 0b100	#Start Timer1
+	stwio r9, 4(r8)
+	
+	poll_timer: 
+		ldwio r9, 0(r8)
+		andi r9, r9, 0b1
+		beq r9, r0,  poll_timer
+	
+	ret
+	
+#**************************TIMER ISR*****************************************
+	.section .exceptions, "ax" 
+	
+TIMER_ISR:
+	rdctl et, ipending #checking ipending 
+	andi et, et, 0x4 #Check if IRQ Line 2 caused the interrupt
+	beq et, r0, exit
+	
+	#Print out: Heart Arythmia detected 
+	
+	#Acknowledge interrupt
+	movia et, Timer2
+	stwio r0, 0(et) #Reset timer 
 
+exit:
+	subi ea, ea, 4
+	eret
