@@ -18,9 +18,18 @@ main:
 	
 	movui r9, 0b0100	#Start Timer2
 	stwio r9, 4(r8)
+	call Get_timer_value
 	
-	br END
+	
+Get_timer_value:
+	#Take snapshot of the time and store it
+	movia r8, Timer2 #Timer 2 address in register 8
+	stwio r0, 16(r8) #Tell timer to take a snapshot of the time
+	ldwio r7, 16(r8) #Read bits 0-15
+	ldwio r2, 20(r8) #Read bits 16-31
+	slli r2, r2, 16 #Shift left logically
+	or r2, r2, r7 #Combine bits 0 through 31
+	br Get_timer_value
+	
 
-END:
-	br END
 	
