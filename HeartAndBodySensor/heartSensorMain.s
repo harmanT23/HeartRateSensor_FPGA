@@ -20,8 +20,6 @@ main:
 	Main_Loop:
 		call Heart_Contract
 		call Heart_Expand
-		mov r4, r2 #Transfer Timer value (number of clock cycles)
-		call Heart_Beat
 		br Main_Loop
 
 Get_ADC_CH0:
@@ -48,6 +46,10 @@ Heart_Contract:
 Heart_Contract_True:
 	#Initialize timer2 and have it count down from 3 seconds
 	movia r8, Timer2 #Timer 2 address in register 2
+	
+	#Stop Timer in case it is already running
+	movui r9, 0x08
+	stwio r9, 4(r8)
 	
 	movui r9, %lo(THREE_SECOND_INTERVAL) 
 	stwio r9, 8(r8)  #Counter start value(low)
@@ -76,19 +78,20 @@ Heart_Expand:
 	ldw ra, 0(sp)
 	addi sp, sp, 4
 	
-	ret
-	
+	ret	
+
 Heart_Expand_True:
 	#Check if timer2 is on
 	movia r8, Timer2 #Timer 2 address in register 2
 	ldw r9, 0(r8)
 	andi r9, r9, 0x00000001 #mask all the bits except timeout bit
 	movui r8, 0x1
-	bne r9, r8, Get_timer_value #if timeout bit is 0; then the timer is on
+	bne r9, r8, Heart_Beat #if timeout bit is 0; then the timer is on
 	ret 
 	
-
-Get_timer_value:
+Heart_Beat:
+	addi sp, sp, -4
+	stw ra, 0(sp)
 	#Take snapshot of the time and store it
 	movia r8, Timer2 #Timer 2 address in register 8
 	stwio r0, 16(r8) #Tell timer to take a snapshot of the time
@@ -99,30 +102,16 @@ Get_timer_value:
 	#stop the timer
 	movui r9, 0b1000
 	stwio r9, 4(r8)
-	ret
-
-Heart_Beat:
-	addi sp, sp, -4
-	stw ra, 0(sp)
-
-	#Check if timer has stopped;
-	movia r8, Timer2 #Timer 2 address in register 2
-	ldw r9, 0(r8)
-	andi r9, r9, 0x0000002 #mask all the bits except stop bits
-	movui r8, 0x2
-	beq r9, r8, Heart_Beat_True  #If timer has stopped we know a heart beat has occured
 	
-	ldw ra, 0(sp)
-	addi sp, sp, 4
-	ret
-
-Heart_Beat_True:
-	#Compute the period of the heart beat
-	#r4 holds timed cycles
-	addi sp, sp, -4
-	stw ra, 0(sp)
+	mov r4, r2 #move number of elapsed cycles from starting time to r4
 	
-	call Heart_Rate
+	call Heart_Rate #compute heart rate
+	
+	mov r4, r2 #move heart rate into r4 
+	
+	call console_heart_rate #Print to console the heart rate
+	
+	
 	
 	ldw ra, 0(sp)
 	addi sp, sp, 4
