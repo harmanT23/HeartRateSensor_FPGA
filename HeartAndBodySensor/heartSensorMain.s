@@ -9,8 +9,15 @@
 .equ CLOCK_CYCLES_PER_SECOND, 0x5F5E100
 .equ SIXTY_SECONDS, 0x3C
 .equ AUDIO_CORE, 0xFF203040
-
-
+.equ ADDR_VGA, 0x08000000
+.equ ADDR_CHAR, 0x09000000
+.equ VERTICAL_LENGTH, 50
+.equ HORIZONTAL_LENGTH, 0x64 
+.equ END_ADDRESS_VERTICAL, 0x0803900A
+.equ END_ADDRESS_HORIZTONAL, 0x0803926A
+.equ WHITE, 0xFFFF  #White pixel 
+.equ HORIZ_AXIS_LABEL, 0x09001D23
+.equ VERT_AXIS_LABEL,0x09000F00
 
 .global main
 
@@ -22,13 +29,97 @@ main:
 	stwio r10, 0(r3) #Set ADC to auto update
 	#*****************************************************
 	
+	#****DRAW INITIAL EMPTY GRAPH**************************
+	call PrintTitle
+	call PrintHorizAxis_Title
+	call PrintVertAxis_Title
+	call DrawVerticalAxis
+	call DrawHoriztonalAxis
+	#******************************************************
 	
-
 	Main_Loop:
 		call Heart_Contract
 		call Heart_Expand
 		br Main_Loop
-		
+
+PrintTitle:
+	movia r2, ADDR_CHAR
+	movi r5, 0x48 #H
+	stbio r5, 33(r2)
+	movi r5, 0x65 #e
+	stbio r5, 34(r2)
+	movi r5, 0x61 #a
+	stbio r5, 35(r2)
+	movi r5, 0x72 #r
+	stbio r5, 36(r2)
+	movi r5, 0x74 #t
+	stbio r5, 37(r2)
+	movi r5, 0x20 #' '
+	stbio r5, 38(r2)
+	movi r5, 0x52 #R
+	stbio r5, 39(r2)
+	movi r5, 0x61 #a
+	stbio r5, 40(r2)
+	movi r5, 0x74 #t
+	stbio r5, 41(r2)
+	movi r5, 0x65 #e
+	stbio r5, 42(r2)
+	ret
+
+PrintHorizAxis_Title:
+	movia r2, HORIZ_AXIS_LABEL
+	movi  r5, 0x53 #S
+	stbio r5, 0(r2)
+	addi r2, r2, 1
+	movi  r5, 0x61 #a
+	stbio r5, 0(r2)
+	addi r2, r2, 1
+	movi  r5, 0x6D #m
+	stbio r5, 0(r2)
+	addi r2, r2, 1
+	movi  r5, 0x70 #p
+	stbio r5, 0(r2)
+	addi r2, r2, 1
+	movi  r5, 0x6C #l
+	stbio r5, 0(r2)
+	addi r2, r2, 1
+	movi  r5, 0x65 #e
+	stbio r5, 0(r2)
+	ret
+
+PrintVertAxis_Title:
+	movia r2, VERT_AXIS_LABEL
+	movi  r5, 0x42 #B
+	stbio r5, 0(r2)
+	addi r2, r2, 128
+	movi  r5, 0x50 #P
+	stbio r5, 0(r2)
+	addi r2, r2, 128
+	movi  r5, 0x4D #M
+	stbio r5, 0(r2)
+
+DrawVerticalAxis:
+	movui r6, WHITE
+	movia r4, ADDR_VGA
+	addi r4, r4,0x140A
+	movia r5, END_ADDRESS_VERTICAL
+	VerticalAxis:
+		sthio r6, 0(r4)
+		addi r4, r4, 0x400
+		blt r4, r5, VerticalAxis
+	ret
+
+	
+DrawHoriztonalAxis:
+	movui r6, WHITE
+	movia r4, END_ADDRESS_VERTICAL
+	movia r5, END_ADDRESS_HORIZTONAL
+	HorizontalAxis:
+		sthio r6, 0(r4)
+		addi r4, r4, 0x1
+		blt r4, r5, HorizontalAxis
+	ret
+	
 Get_ADC_CH0:
 	movia r7, ADC_CH0  #Store channel 0 address into r7
 	ldwio r4, 0(r7) #Read the value from ADC channel 0 into r2
