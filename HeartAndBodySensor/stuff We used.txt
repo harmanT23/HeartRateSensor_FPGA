@@ -1,0 +1,4 @@
+ADC
+Timer + Interrupt
+JTAG UART transmit
+Linking C with assembly

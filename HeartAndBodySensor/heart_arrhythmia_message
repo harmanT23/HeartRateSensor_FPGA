@@ -1,0 +1,5 @@
+#include <stdio.h>
+
+//Code adopted from: http://www-ug.eecg.toronto.edu/msl/nios.html
+#define JTAG_UART_DATA ((volatile int*) 0xFF201000)
+#define JTAG_UART_CONTROL ((volatile int*) (0xFF201000+4))
