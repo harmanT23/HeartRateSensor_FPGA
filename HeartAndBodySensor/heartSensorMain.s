@@ -171,11 +171,51 @@ TIMER_ISR:
 	#Print out: Heart Arythmia detected 
 	call heart_warning
 	
+	
+	#*************Heart Flatline Wav Sound*******************
+	movia r10, END_SOUND_FL
+	movia r6, AUDIO_CORE
+	movia r4, Heart_FLATLINE_SOUND
+	movi r7, 48
+	mov r8, r7
+	#****************************************************
+	#The following code is a modified version of the Audio Output test example on
+	#http://nios.stuffedcow.net/
+	
+	WaitForWriteSpace_FL:
+		ldwio r2, 4(r6)
+		andhi r3, r2, 0xFF00 
+		beq r3, r0, WaitForWriteSpace_FL
+		andhi r3, r2, 0x00FF
+		beq r3, r2, WaitForWriteSpace_FL
+		
+	WriteTwoSamples_FL:
+		ldh r5, 0(r4) #Load a byte of data from r4
+		slli r5, r5, 16 #shift left 16 bits
+		stwio r5, 8(r6) #Send to left channel
+
+		addi r4, r4, 2 #Shift r4 to the next half word of audio
+		beq r4, r10, Acknowledge_2 #Check if we have hit end of audio
+
+		ldh r5, 0(r4) #Load a half word of data from r4
+		slli r5, r5, 16 #shift left 16 bits
+		stwio r5, 12(r6) #Send to right channel
+
+		addi r4, r4, 2 #Shift r4 to the next half word of audio
+		beq r4, r10, Acknowledge_2 #Check if we have hit end of audio
+
+		subi r8, r8, -1
+		bne r8, zero, WaitForWriteSpace_FL
+			
+	
 	#Acknowledge interrupt timer 2
+	Acknowledge_2:
 	movia et, Timer2
 	stwio r0, 0(et) #Reset timer 
 	br exit
 	
+	
+	#TIMER1 ISR*********************************************************
 	checkTimer1:
 		andi r14, et, 0x1 #Check if IRQ Line 1 caused the interrupt
 		beq r14, r0, exit #Exit if timer1 didn't cause it
@@ -225,13 +265,14 @@ TIMER_ISR:
 			movi r15, 0x1
 			br exit
 			
-				
-
 exit:
 	subi ea, ea, 4
 	eret
 #****************DATA*************************************
 	.section .data
 
+Heart_FLATLINE_SOUND: .incbin "heartFlatLine.wav"
+END_SOUND_FL:	
+	
 HEART_BEAT_SOUND: .incbin "HeartBeat_1_Second.wav" 
 END_SOUND:
