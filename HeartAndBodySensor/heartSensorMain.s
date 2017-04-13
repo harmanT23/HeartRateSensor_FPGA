@@ -15,9 +15,11 @@
 .equ HORIZONTAL_LENGTH, 0x64 
 .equ END_ADDRESS_VERTICAL, 0x0803900A
 .equ END_ADDRESS_HORIZTONAL, 0x0803926A
-.equ WHITE, 0xFFFF  #White pixel 
+.equ WHITE, 0xFFFF  #White pixel
+.equ RED, 0xF800 #Red Pixel
 .equ HORIZ_AXIS_LABEL, 0x09001D23
 .equ VERT_AXIS_LABEL,0x09000F00
+.equ END_OF_GRAPH, 0x08038E6A
 .equ ORIGIN, 0x08038C0C
 
 .global main
@@ -36,6 +38,7 @@ main:
 	call PrintVertAxis_Title
 	call DrawVerticalAxis
 	call DrawHoriztonalAxis
+	movui r13, 0x0 #initialize counter 
 	#******************************************************
 	
 	Main_Loop:
@@ -193,8 +196,9 @@ Heart_Expand_True:
 	ret 
 	
 Heart_Beat:
-	addi sp, sp, -4
+	addi sp, sp, -12
 	stw ra, 0(sp)
+	stw r13, 4(sp)
 	#Take snapshot of the time and store it
 	movia r8, Timer2 #Timer 2 address in register 8
 	stwio r0, 16(r8) #Tell timer to take a snapshot of the time
@@ -211,15 +215,46 @@ Heart_Beat:
 	call Heart_Rate #compute heart rate
 	
 	mov r4, r2 #move heart rate from r2 to r4
-	
+	stw r4, 8(sp) #back up r4
 	call console_heart_rate #Print to console the heart rate
+	ldw r4, 8(sp) #get back r4
+	
+	ldw r13, 4(sp)
+	mov r5, r13 #move counter to r5 as second argument 
+	call getAddress
+	
+	ldw r13, 4(sp) #get back r13 
+	call plotHeartRate #If r2 is not 0 plot heart rate
 	
 	call Delay #Create a one second delay
 	
 	ldw ra, 0(sp)
-	addi sp, sp, 4
+	ldw r13, 4(sp)
+	ldw r4, 8(sp)
+	addi sp, sp, 12
+	
+	mov r13, r16
+	
 	ret
 
+plotHeartRate:
+	beq r2, r0, returnBack
+	
+	plotPixel:
+		movia r10, END_OF_GRAPH
+		beq r2, r10, CLEAR_SCREEN
+		
+		#Plot Heart Rate
+		movui r6, RED
+		sthio r6, 0(r2)
+		
+		addi r13, r13, 1 #increment counter
+	returnBack:
+		mov r16, r13
+		ret
+		
+CLEAR_SCREEN:
+	ret
 
 Delay:
 	
