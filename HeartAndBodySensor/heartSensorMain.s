@@ -18,6 +18,7 @@
 .equ WHITE, 0xFFFF  #White pixel 
 .equ HORIZ_AXIS_LABEL, 0x09001D23
 .equ VERT_AXIS_LABEL,0x09000F00
+.equ ORIGIN, 0x08038C0C
 
 .global main
 
