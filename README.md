@@ -1,6 +1,6 @@
 ## Harman Tatla & Manu Kamath
-This is an open source project that detects heart rate and body temperature using a DE1-SoC FPGA, Pulse Sensor from https://pulsesensor.com/, and an Arduino Uno coupled with a temperature sensor. The program is written in NIOS II.
+This is an open source project that was developed for a course we were taking at the University of Toronto. It is a heart rate monitoring system written in C/NIOS II to be used on a DE1-SoC FPGA along side a pulse sensor (i.e. https://pulsesensor.com/) that is interfaced with the FPGA. 
 
-This was developed as a project for a Computer Architecture course.
+Feel free to build off of this project but do not plagiarize this code for any school related projects. 
 
 
